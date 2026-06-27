@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lock Solver — Gothic 1 Remake</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap');
+:root{
+  --bg:#14100c; --bg2:#1b1611; --panel:#211b15; --panel2:#1a1510;
+  --iron:#2c2620; --iron-edge:#403930; --iron-hole:#0d0a07;
+  --brass:#c2a05a; --brass-bright:#e8c87e; --brass-deep:#8a6f38;
+  --parch:#ddd0ba; --muted:#8a7d6c; --faint:#5d5247;
+  --ember:#c0532a; --ember-dim:#7d3a20;
+  --line:rgba(221,208,186,0.12); --good:#7fae5a;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  font-family:'EB Garamond',Georgia,serif;color:var(--parch);
+  background:radial-gradient(1200px 700px at 50% -10%, #2a211833, transparent 60%),
+    radial-gradient(900px 600px at 90% 110%, #3a1f1422, transparent 60%),var(--bg);
+  min-height:100vh;-webkit-font-smoothing:antialiased;padding:28px 18px 60px;
+}
+.wrap{max-width:760px;margin:0 auto}
+.langbar{display:flex;justify-content:flex-end;gap:6px;margin-bottom:6px}
+.langbtn{font-family:'Cinzel',serif;font-size:12px;letter-spacing:.04em;display:inline-flex;align-items:center;gap:6px;
+  padding:6px 11px;border-radius:7px;border:1px solid var(--iron-edge);background:var(--iron);color:var(--muted);
+  cursor:pointer;transition:all .12s;}
+.langbtn:hover{color:var(--parch);border-color:var(--brass-deep)}
+.langbtn.on{background:var(--brass-deep);color:#1a140c;border-color:var(--brass-bright)}
+.langbtn .flag{font-size:15px;line-height:1}
+header{text-align:center;margin-bottom:22px}
+h1{font-family:'Cinzel',serif;font-weight:700;font-size:clamp(26px,5.5vw,40px);
+  letter-spacing:.06em;margin:0;color:var(--parch);text-shadow:0 2px 0 #000a,0 0 30px #c0532a22;}
+h1 .em{color:var(--brass-bright)}
+.sub{color:var(--muted);font-style:italic;margin-top:6px;font-size:15px}
+.diamond{display:block;text-align:center;color:var(--brass-deep);margin:6px 0 0;font-size:13px}
+.rule{height:1px;background:linear-gradient(90deg,transparent,var(--line) 20%,var(--line) 80%,transparent);margin:18px 0}
+.card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);
+  border-radius:10px;padding:18px 18px 20px;margin-bottom:18px;
+  box-shadow:inset 0 1px 0 #ffffff08,0 14px 40px -24px #000;}
+.card h2{font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--brass);margin:0 0 4px;display:flex;align-items:center;gap:10px;}
+.card h2 .n{font-size:11px;color:var(--bg);background:var(--brass-deep);width:20px;height:20px;
+  border-radius:50%;display:grid;place-items:center;font-family:'Cinzel';font-weight:700;flex:none;}
+.hint{color:var(--muted);font-size:14px;margin:2px 0 14px;line-height:1.5}
+.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+label.fld{font-size:14px;color:var(--parch)}
+select{background:var(--iron);color:var(--parch);border:1px solid var(--iron-edge);
+  border-radius:6px;padding:7px 10px;font-size:15px;font-family:inherit;}
+.plates{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+.plate{display:grid;grid-template-columns:64px 1fr;align-items:center;gap:12px;}
+.plabel{font-family:'Cinzel';font-size:13px;color:var(--muted);letter-spacing:.05em}
+.plabel-pop{color:var(--good)}
+.strip{position:relative;display:flex;justify-content:space-between;align-items:center;
+  background:linear-gradient(180deg,#36302a,#211c17 60%,#2a241e);border:1px solid var(--iron-edge);
+  border-radius:7px;padding:11px 16px;box-shadow:inset 0 1px 0 #ffffff12,inset 0 -8px 14px -8px #000;}
+.strip .center-mark{position:absolute;left:50%;top:-1px;bottom:-1px;width:34px;transform:translateX(-50%);
+  border-left:1px dashed #c2a05a44;border-right:1px dashed #c2a05a44;border-radius:6px;
+  background:#c2a05a0c;pointer-events:none;}
+.hole{position:relative;z-index:1;width:18px;height:18px;border-radius:50%;
+  background:radial-gradient(circle at 38% 32%, #000 0 40%, #1a1611 70%, #2e2820 100%);
+  box-shadow:inset 0 1px 2px #000,0 1px 0 #ffffff0a;cursor:pointer;flex:none;transition:transform .12s;}
+.editable .hole:hover{transform:scale(1.18)}
+.pin{background:radial-gradient(circle at 38% 30%, var(--brass-bright), var(--brass) 55%, var(--brass-deep) 100%);
+  box-shadow:0 0 0 1px #00000055,0 1px 2px #000,0 0 10px -2px #e8c87e88;}
+.pin.popped{transform:translateY(-3px) scale(1.06);
+  box-shadow:0 0 0 1px #00000055,0 4px 6px -2px #000,0 0 16px 0 #7fae5a88;
+  background:radial-gradient(circle at 38% 30%, #e9e0a8, #b9c47a 55%, #7fae5a 100%);}
+.strip.active{outline:2px solid var(--ember);outline-offset:2px}
+.cgrid{overflow-x:auto;margin-top:4px}
+table.coup{border-collapse:collapse;font-size:14px}
+table.coup th,table.coup td{padding:4px;text-align:center}
+table.coup th{color:var(--muted);font-weight:500;font-family:'Cinzel';font-size:12px}
+.cbtn{width:34px;height:34px;border-radius:6px;border:1px solid var(--iron-edge);background:var(--iron);
+  color:var(--faint);font-size:17px;cursor:pointer;display:grid;place-items:center;transition:all .12s;}
+.cbtn.same{color:var(--bg);background:var(--brass);border-color:var(--brass-bright)}
+.cbtn.opp{color:#fff;background:var(--ember);border-color:#e07a4f}
+.cbtn.self{background:#100c08;border-color:#100c08;cursor:default;color:#3a332b}
+.clegend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:13px;color:var(--muted)}
+.tag{display:inline-flex;align-items:center;gap:6px}
+.swatch{width:14px;height:14px;border-radius:4px;display:inline-block}
+.actions{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.btn{font-family:'Cinzel';letter-spacing:.06em;font-weight:600;font-size:14px;padding:12px 22px;
+  border-radius:7px;border:1px solid var(--brass-deep);background:linear-gradient(180deg,#caa55c,#9c7c3e);
+  color:#1a140c;cursor:pointer;box-shadow:0 2px 0 #00000040,inset 0 1px 0 #ffffff40;transition:transform .08s,filter .15s;}
+.btn:hover{filter:brightness(1.08)}
+.btn:active{transform:translateY(1px)}
+.btn.ghost{background:transparent;color:var(--muted);border-color:var(--iron-edge);box-shadow:none}
+.btn.ghost:hover{color:var(--parch)}
+.btn:disabled{opacity:.4;cursor:not-allowed;filter:none}
+.modesel{display:inline-flex;border:1px solid var(--iron-edge);border-radius:8px;overflow:hidden}
+.modesel button{font-family:'Cinzel';font-size:12px;letter-spacing:.04em;padding:9px 14px;border:0;
+  background:transparent;color:var(--muted);cursor:pointer;transition:all .12s}
+.modesel button.on{background:var(--brass-deep);color:#1a140c}
+#result{display:none}
+.callout{border-left:3px solid var(--ember);background:#c0532a14;padding:12px 14px;border-radius:0 6px 6px 0;
+  color:var(--parch);font-size:14px;line-height:1.5;margin-bottom:16px}
+.callout.warn{border-color:#d4a23a;background:#d4a23a14}
+.steparea{text-align:center}
+.stepmove{font-family:'Cinzel';font-size:clamp(20px,4vw,26px);font-weight:700;letter-spacing:.04em;margin:6px 0 2px;}
+.stepmove .arrow{color:var(--ember);font-size:1.25em;vertical-align:-2px}
+.stepmove .pno{color:var(--brass-bright)}
+.stepsub{color:var(--muted);font-size:14px;font-style:italic;min-height:18px}
+.stepcount{color:var(--muted);font-size:13px;letter-spacing:.1em;text-transform:uppercase;font-family:'Cinzel'}
+.done{color:var(--good);font-family:'Cinzel';font-size:22px;font-weight:700;letter-spacing:.04em}
+.seqlist{margin-top:18px;display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.chip{font-size:12px;font-family:'Cinzel';padding:5px 9px;border-radius:5px;border:1px solid var(--iron-edge);
+  background:var(--iron);color:var(--muted);}
+.chip.cur{background:var(--ember);color:#fff;border-color:#e07a4f}
+.chip.past{color:var(--faint);opacity:.6}
+footer{text-align:center;color:var(--faint);font-size:12px;margin-top:30px;font-style:italic}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="langbar" id="langBar">
+    <button class="langbtn" data-lang="fr"><span class="flag">🇫🇷</span> FR</button>
+    <button class="langbtn" data-lang="en"><span class="flag">🇬🇧</span> EN</button>
+    <button class="langbtn" data-lang="it"><span class="flag">🇮🇹</span> IT</button>
+  </div>
+
+  <header>
+    <h1 id="h1"></h1>
+    <div class="diamond">◇</div>
+    <div class="sub" id="sub"></div>
+  </header>
+
+  <div class="callout warn" id="warnBox"></div>
+
+  <div class="card">
+    <h2><span class="n">1</span> <span id="c1title"></span></h2>
+    <div class="hint" id="c1hint"></div>
+    <div class="row">
+      <label class="fld" id="nplatesLabel">&nbsp;
+        <select id="nplates"><option>4</option><option selected>5</option><option>6</option><option>7</option></select>
+      </label>
+      <span class="hint" style="margin:0" id="c1note"></span>
+    </div>
+    <div id="setupBoard" class="plates editable"></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">2</span> <span id="c2title"></span></h2>
+    <div class="hint" id="c2hint"></div>
+    <div class="cgrid"><table class="coup" id="coupTable"></table></div>
+    <div class="clegend" id="clegend"></div>
+  </div>
+
+  <div class="card">
+    <div class="actions">
+      <button class="btn" id="solveBtn"></button>
+      <button class="btn ghost" id="resetBtn"></button>
+    </div>
+  </div>
+
+  <div class="card" id="result">
+    <h2><span class="n">3</span> <span id="c3title"></span></h2>
+    <div id="resultMsg"></div>
+    <div id="walk" class="steparea" style="display:none">
+      <div class="row" style="justify-content:center;margin-bottom:6px">
+        <span class="hint" style="margin:0" id="instrIn"></span>
+        <div class="modesel" id="modeSel">
+          <button data-mode="plate" class="on" id="modePlate"></button>
+          <button data-mode="pin" id="modePin"></button>
+        </div>
+      </div>
+      <div class="plates" id="walkBoard"></div>
+      <div class="rule"></div>
+      <div class="stepcount" id="stepCount"></div>
+      <div class="stepmove" id="stepMove"></div>
+      <div class="stepsub" id="stepSub"></div>
+      <div class="actions" style="justify-content:center;margin-top:14px">
+        <button class="btn ghost" id="prevBtn"></button>
+        <button class="btn" id="nextBtn"></button>
+      </div>
+      <div class="seqlist" id="seqList"></div>
+    </div>
+  </div>
+
+  <footer id="footer"></footer>
+</div>
+
+<script>
+/* ===================== i18n ===================== */
+const I18N = {
+  fr: {
+    htmlLang:'fr',
+    title:'Solveur de serrure — Gothic 1 Remake',
+    h1:'Ouvrir <span class="em">la Porte</span>',
+    sub:'Solveur de crochetage — Gothic 1 Remake',
+    warn:'<strong>Avant tout :</strong> sauvegarde. Sans entraînement, le crochet ne tolère que 2 contacts avec un mur — au 2ᵉ il casse et la serrure se réinitialise. Ne quitte jamais l\'écran si le crochet a déjà pris une contrainte. Le solveur ne propose <em>que</em> des coups qui ne touchent aucun mur.',
+    c1title:'La serrure',
+    c1hint:'Choisis le nombre de plaques, puis clique le trou où se trouve le <strong>pion (laiton)</strong> de chaque plaque, de 1 (gauche) à 7 (droite). La zone centrale claire = la cible : tous les pions doivent finir là.',
+    nplatesLabel:'Nombre de plaques',
+    c1note:'Plaque 1 = la plus en avant (le crochet), comme dans le jeu.',
+    c2title:'Les liaisons',
+    c2hint:'En jeu, fais bouger le <strong>pion</strong> de chaque plaque d\'un cran vers un espace libre et regarde quels autres pions bougent. Ligne = la plaque que tu bouges ; colonne = ce qui bouge avec elle. Clique une case pour alterner. « Même sens / sens inverse » se lit sur les <strong>pions</strong> (c\'est identique que tu regardes la plaque ou le pion).',
+    legNone:'aucune', legSame:'même sens', legOpp:'sens inverse',
+    solve:'Résoudre', reset:'Tout remettre à zéro',
+    c3title:'La solution',
+    instrIn:'Instructions en :', modePlate:'Plaque (touches)', modePin:'Pion (visuel)',
+    prev:'‹ Précédent', next:'Suivant ›',
+    plate:'Plaque', rotate:'Tourner P', col:'P',
+    noPath:'Aucun chemin sans heurter de mur n\'a été trouvé avec ces liaisons. Revérifie les couplages (en regardant les pions) ou les positions de départ.',
+    alreadyOpen:'Déjà ouverte ✦', allCenter:'Tous les pions sont déjà au centre.',
+    solCount:(n)=>n+' coups suffisent, sans jamais toucher un mur. Avance pas à pas et reproduis chaque mouvement en jeu.',
+    step:'Coup', of:'/', finished:'Terminé', lockOpen:'Serrure ouverte ✦',
+    left:'gauche', right:'droite',
+    pinHead:(p,arrow,word)=>'Pion <span class="pno">'+p+'</span> <span class="arrow">'+arrow+'</span> '+word,
+    pinSub:(plateWord)=>'(la plaque, elle, part vers '+plateWord+')',
+    plateHead:(p,arrow,word)=>'Plaque <span class="pno">'+p+'</span> <span class="arrow">'+arrow+'</span> '+word,
+    plateSub:(pinWord)=>'son pion se déplace vers '+pinWord,
+    theLeft:'la gauche', theRight:'la droite',
+    footer:'Aide non officielle pour Gothic 1 Remake (Alkimia Interactive). Cible = trou central. Rappel : la plaque et son pion se déplacent en sens opposés.'
+  },
+  en: {
+    htmlLang:'en',
+    title:'Lock Solver — Gothic 1 Remake',
+    h1:'Open <span class="em">the Door</span>',
+    sub:'Lockpicking solver — Gothic 1 Remake',
+    warn:'<strong>First of all:</strong> save your game. Without skill, the pick only tolerates 2 contacts with a wall — on the 2nd it breaks and the lock resets. Never leave the screen if the pick has already taken a wrong turn. The solver only ever suggests moves that touch no wall.',
+    c1title:'The lock',
+    c1hint:'Pick the number of tumblers, then click the hole where each tumbler\'s <strong>pin (brass)</strong> sits, from 1 (left) to 7 (right). The lighter central zone = the target: every pin must end up there.',
+    nplatesLabel:'Number of tumblers',
+    c1note:'Tumbler 1 = the frontmost one (the pick), just like in the game.',
+    c2title:'The linkages',
+    c2hint:'In the game, nudge each tumbler\'s <strong>pin</strong> one notch toward a free space and watch which other pins move. Row = the tumbler you move; column = what moves with it. Click a cell to cycle it. "Same way / opposite way" is read on the <strong>pins</strong> (it\'s the same whether you watch the tumbler or the pin).',
+    legNone:'none', legSame:'same way', legOpp:'opposite way',
+    solve:'Solve', reset:'Reset everything',
+    c3title:'The solution',
+    instrIn:'Instructions as:', modePlate:'Tumbler (keys)', modePin:'Pin (visual)',
+    prev:'‹ Previous', next:'Next ›',
+    plate:'Tumbler', rotate:'Turn T', col:'T',
+    noPath:'No wall-free path was found with these linkages. Double-check the couplings (by watching the pins) or the starting positions.',
+    alreadyOpen:'Already open ✦', allCenter:'All pins are already centered.',
+    solCount:(n)=>n+' moves are enough, never touching a wall. Step through and reproduce each move in the game.',
+    step:'Move', of:'/', finished:'Done', lockOpen:'Lock open ✦',
+    left:'left', right:'right',
+    pinHead:(p,arrow,word)=>'Pin <span class="pno">'+p+'</span> <span class="arrow">'+arrow+'</span> '+word,
+    pinSub:(plateWord)=>'(the tumbler itself moves to the '+plateWord+')',
+    plateHead:(p,arrow,word)=>'Tumbler <span class="pno">'+p+'</span> <span class="arrow">'+arrow+'</span> '+word,
+    plateSub:(pinWord)=>'its pin moves to the '+pinWord,
+    theLeft:'left', theRight:'right',
+    footer:'Unofficial helper for Gothic 1 Remake (Alkimia Interactive). Target = central hole. Reminder: a tumbler and its pin move in opposite directions.'
+  },
+  it: {
+    htmlLang:'it',
+    title:'Risolutore serratura — Gothic 1 Remake',
+    h1:'Apri <span class="em">la Porta</span>',
+    sub:'Risolutore di scasso — Gothic 1 Remake',
+    warn:'<strong>Prima di tutto:</strong> salva la partita. Senza abilità, il grimaldello tollera solo 2 contatti con un muro — al 2° si spezza e la serratura si azzera. Non lasciare mai la schermata se il grimaldello ha già preso una direzione sbagliata. Il risolutore propone <em>solo</em> mosse che non toccano alcun muro.',
+    c1title:'La serratura',
+    c1hint:'Scegli il numero di piastre, poi clicca il foro in cui si trova il <strong>perno (ottone)</strong> di ogni piastra, da 1 (sinistra) a 7 (destra). La zona centrale più chiara = il bersaglio: tutti i perni devono finire lì.',
+    nplatesLabel:'Numero di piastre',
+    c1note:'Piastra 1 = la più avanzata (il grimaldello), come nel gioco.',
+    c2title:'I collegamenti',
+    c2hint:'Nel gioco, sposta il <strong>perno</strong> di ogni piastra di una tacca verso uno spazio libero e osserva quali altri perni si muovono. Riga = la piastra che muovi; colonna = ciò che si muove con essa. Clicca una cella per alternare. «Stesso verso / verso opposto» si legge sui <strong>perni</strong> (è identico sia che guardi la piastra sia il perno).',
+    legNone:'nessuno', legSame:'stesso verso', legOpp:'verso opposto',
+    solve:'Risolvi', reset:'Azzera tutto',
+    c3title:'La soluzione',
+    instrIn:'Istruzioni come:', modePlate:'Piastra (tasti)', modePin:'Perno (visivo)',
+    prev:'‹ Precedente', next:'Avanti ›',
+    plate:'Piastra', rotate:'Ruota P', col:'P',
+    noPath:'Nessun percorso senza urtare un muro è stato trovato con questi collegamenti. Ricontrolla gli accoppiamenti (osservando i perni) o le posizioni di partenza.',
+    alreadyOpen:'Già aperta ✦', allCenter:'Tutti i perni sono già al centro.',
+    solCount:(n)=>n+' mosse bastano, senza mai toccare un muro. Procedi passo dopo passo e riproduci ogni movimento nel gioco.',
+    step:'Mossa', of:'/', finished:'Finito', lockOpen:'Serratura aperta ✦',
+    left:'sinistra', right:'destra',
+    pinHead:(p,arrow,word)=>'Perno <span class="pno">'+p+'</span> <span class="arrow">'+arrow+'</span> '+word,
+    pinSub:(plateWord)=>'(la piastra invece va verso '+plateWord+')',
+    plateHead:(p,arrow,word)=>'Piastra <span class="pno">'+p+'</span> <span class="arrow">'+arrow+'</span> '+word,
+    plateSub:(pinWord)=>'il suo perno si sposta verso '+pinWord,
+    theLeft:'sinistra', theRight:'destra',
+    footer:'Aiuto non ufficiale per Gothic 1 Remake (Alkimia Interactive). Bersaglio = foro centrale. Promemoria: una piastra e il suo perno si muovono in versi opposti.'
+  }
+};
+
+let LANG = 'en';
+function t(){ return I18N[LANG]; }
+
+function applyStaticI18n(){
+  const L = t();
+  document.documentElement.lang = L.htmlLang;
+  document.title = L.title;
+  document.getElementById('h1').innerHTML = L.h1;
+  document.getElementById('sub').textContent = L.sub;
+  document.getElementById('warnBox').innerHTML = L.warn;
+  document.getElementById('c1title').textContent = L.c1title;
+  document.getElementById('c1hint').innerHTML = L.c1hint;
+  document.getElementById('nplatesLabel').childNodes[0].nodeValue = L.nplatesLabel + ' ';
+  document.getElementById('c1note').textContent = L.c1note;
+  document.getElementById('c2title').textContent = L.c2title;
+  document.getElementById('c2hint').innerHTML = L.c2hint;
+  document.getElementById('clegend').innerHTML =
+    '<span class="tag"><span class="swatch" style="background:var(--iron);border:1px solid var(--iron-edge)"></span> · '+L.legNone+'</span>'+
+    '<span class="tag"><span class="swatch" style="background:var(--brass)"></span> = '+L.legSame+'</span>'+
+    '<span class="tag"><span class="swatch" style="background:var(--ember)"></span> ≠ '+L.legOpp+'</span>';
+  document.getElementById('solveBtn').textContent = L.solve;
+  document.getElementById('resetBtn').textContent = L.reset;
+  document.getElementById('c3title').textContent = L.c3title;
+  document.getElementById('instrIn').textContent = L.instrIn;
+  document.getElementById('modePlate').textContent = L.modePlate;
+  document.getElementById('modePin').textContent = L.modePin;
+  document.getElementById('prevBtn').textContent = L.prev;
+  document.getElementById('nextBtn').textContent = L.next;
+  document.getElementById('footer').textContent = L.footer;
+  document.querySelectorAll('#langBar .langbtn').forEach(b=>b.classList.toggle('on', b.dataset.lang===LANG));
+}
+
+/* ===================== solver state ===================== */
+const HOLES=7, CENTER=4;
+let N=5, pins=[], coup=[], solution=null, stepIdx=0, outputMode='plate';
+
+function initState(n){ N=n; pins=Array.from({length:N},()=>CENTER); coup=Array.from({length:N},()=>Array(N).fill(0)); }
+
+function makeStrip(plateIdx,pos,editable){
+  const strip=document.createElement('div'); strip.className='strip';
+  const mark=document.createElement('div'); mark.className='center-mark'; strip.appendChild(mark);
+  for(let h=1;h<=HOLES;h++){
+    const hole=document.createElement('div'); hole.className='hole';
+    if(h===pos){ hole.classList.add('pin'); if(pos===CENTER) hole.classList.add('popped'); }
+    if(editable) hole.addEventListener('click',()=>{ pins[plateIdx]=h; renderSetup(); });
+    strip.appendChild(hole);
+  }
+  return strip;
+}
+function renderBoardInto(container,positions,editable){
+  container.innerHTML='';
+  for(let i=N-1;i>=0;i--){
+    const wrap=document.createElement('div'); wrap.className='plate';
+    const lab=document.createElement('div');
+    lab.className='plabel'+(positions[i]===CENTER?' plabel-pop':'');
+    lab.textContent=t().plate+' '+(i+1); wrap.appendChild(lab);
+    if(editable) container.classList.add('editable');
+    wrap.appendChild(makeStrip(i,positions[i],editable));
+    container.appendChild(wrap);
+  }
+}
+function renderSetup(){ renderBoardInto(document.getElementById('setupBoard'),pins,true); }
+
+function el(tag,txt){const e=document.createElement(tag);e.textContent=txt;return e;}
+function renderCoupTable(){
+  const t2=document.getElementById('coupTable'); t2.innerHTML='';
+  const head=document.createElement('tr'); head.appendChild(el('th',''));
+  for(let j=0;j<N;j++) head.appendChild(el('th',t().col+(j+1)));
+  t2.appendChild(head);
+  for(let i=0;i<N;i++){
+    const tr=document.createElement('tr'); tr.appendChild(el('th',t().rotate+(i+1)));
+    for(let j=0;j<N;j++){
+      const td=document.createElement('td'); const b=document.createElement('button'); b.className='cbtn';
+      if(i===j){ b.classList.add('self'); b.textContent='—'; }
+      else{
+        const setLabel=()=>{ b.classList.remove('same','opp');
+          if(coup[i][j]===0) b.textContent='·';
+          else if(coup[i][j]===1){ b.textContent='='; b.classList.add('same'); }
+          else { b.textContent='≠'; b.classList.add('opp'); } };
+        setLabel();
+        b.addEventListener('click',()=>{ coup[i][j]=coup[i][j]===0?1:coup[i][j]===1?-1:0; setLabel(); });
+      }
+      td.appendChild(b); tr.appendChild(td);
+    }
+    t2.appendChild(tr);
+  }
+}
+
+/* solver: pos[i] = pin hole. dir>0 => pin to the right. */
+function encode(p){ let k=0; for(let i=0;i<N;i++) k=k*7+(p[i]-1); return k; }
+function applyMove(p,plate,dir){
+  const np=p.slice(); np[plate]+=dir;
+  for(let j=0;j<N;j++){ if(j!==plate && coup[plate][j]!==0) np[j]+=dir*coup[plate][j]; }
+  for(let j=0;j<N;j++){ if(np[j]<1||np[j]>HOLES) return null; }
+  return np;
+}
+function solve(){
+  const start=pins.slice(), goal=Array(N).fill(CENTER);
+  if(start.every(v=>v===CENTER)) return {moves:[],states:[start]};
+  const goalKey=encode(goal);
+  const prev=new Map(); prev.set(encode(start),{pkey:null,move:null,state:start});
+  const q=[start]; let head=0;
+  while(head<q.length){
+    const cur=q[head++]; const ck=encode(cur);
+    if(ck===goalKey) break;
+    for(let plate=0;plate<N;plate++) for(const dir of [-1,1]){
+      const nx=applyMove(cur,plate,dir); if(!nx) continue;
+      const nk=encode(nx); if(prev.has(nk)) continue;
+      prev.set(nk,{pkey:ck,move:{plate,dir},state:nx});
+    }
+    for(let plate=0;plate<N;plate++) for(const dir of [-1,1]){
+      const nx=applyMove(cur,plate,dir); if(!nx) continue;
+      const nk=encode(nx); const node=prev.get(nk);
+      if(node && node.pkey===ck) q.push(nx);
+    }
+    if(prev.has(goalKey)) break;
+  }
+  if(!prev.has(goalKey)) return null;
+  const moves=[],states=[]; let k=goalKey;
+  while(k!==null){ const node=prev.get(k); states.push(node.state); if(node.move) moves.push(node.move); k=node.pkey; }
+  states.reverse(); moves.reverse(); return {moves,states};
+}
+
+/* direction labelling per mode */
+function moveLabel(plate,dir){
+  const L=t();
+  // dir>0 => pin goes right ; so the tumbler goes left.
+  if(outputMode==='pin'){
+    const word=dir>0?L.right:L.left, arrow=dir>0?'→':'←';
+    const plateWord=dir>0?L.theLeft:L.theRight;
+    return {head:L.pinHead(plate+1,arrow,word), sub:L.pinSub(plateWord)};
+  } else {
+    const plateRight=dir<0; // tumbler to the right when pin goes left
+    const word=plateRight?L.right:L.left, arrow=plateRight?'→':'←';
+    const pinWord=dir>0?L.theRight:L.theLeft;
+    return {head:L.plateHead(plate+1,arrow,word), sub:L.plateSub(pinWord)};
+  }
+}
+function chipLabel(plate,dir){
+  if(outputMode==='pin'){ return 'P'+(plate+1)+(dir>0?'→':'←'); }
+  return 'P'+(plate+1)+(dir<0?'→':'←');
+}
+
+function showResult(){
+  const L=t();
+  const res=document.getElementById('result'), msg=document.getElementById('resultMsg'), walk=document.getElementById('walk');
+  res.style.display='block'; res.scrollIntoView({behavior:'smooth',block:'start'});
+  solution=solve();
+  if(solution===null){
+    walk.style.display='none';
+    msg.innerHTML='<div class="callout warn">'+L.noPath+'</div>';
+    return;
+  }
+  if(solution.moves.length===0){
+    walk.style.display='none';
+    msg.innerHTML='<div class="callout"><span class="done">'+L.alreadyOpen+'</span><br>'+L.allCenter+'</div>';
+    return;
+  }
+  msg.innerHTML='<div class="callout">'+L.solCount(solution.moves.length)+'</div>';
+  walk.style.display='block'; stepIdx=0; renderStep();
+}
+function renderStep(){
+  const L=t();
+  const states=solution.states, moves=solution.moves;
+  renderBoardInto(document.getElementById('walkBoard'),states[stepIdx],false);
+  document.getElementById('stepCount').textContent = stepIdx<moves.length?(L.step+' '+(stepIdx+1)+' '+L.of+' '+moves.length):L.finished;
+  const sm=document.getElementById('stepMove'), ss=document.getElementById('stepSub');
+  if(stepIdx<moves.length){
+    const m=moves[stepIdx], lab=moveLabel(m.plate,m.dir);
+    sm.innerHTML=lab.head; ss.textContent=lab.sub;
+    const strips=document.querySelectorAll('#walkBoard .strip');
+    const visualRow=(N-1)-m.plate;
+    if(strips[visualRow]) strips[visualRow].classList.add('active');
+  } else { sm.innerHTML='<span class="done">'+L.lockOpen+'</span>'; ss.textContent=''; }
+  document.getElementById('prevBtn').disabled=stepIdx===0;
+  document.getElementById('nextBtn').disabled=stepIdx>=moves.length;
+  renderSeq();
+}
+function renderSeq(){
+  const wrap=document.getElementById('seqList'); wrap.innerHTML='';
+  solution.moves.forEach((m,i)=>{
+    const c=document.createElement('span');
+    c.className='chip'+(i<stepIdx?' past':'')+(i===stepIdx?' cur':'');
+    c.textContent=chipLabel(m.plate,m.dir); wrap.appendChild(c);
+  });
+}
+
+function rebuild(){
+  initState(parseInt(document.getElementById('nplates').value,10));
+  renderSetup(); renderCoupTable(); document.getElementById('result').style.display='none';
+}
+
+function setLang(lang){
+  if(!I18N[lang]) return;
+  LANG = lang;
+  try{ localStorage.setItem('gothicSolverLang', lang); }catch(e){}
+  applyStaticI18n();
+  renderSetup(); renderCoupTable();
+  // keep result panel coherent if a solution is on screen
+  if(document.getElementById('result').style.display==='block' && solution){
+    renderStep();
+  }
+}
+
+document.getElementById('nplates').addEventListener('change',rebuild);
+document.getElementById('solveBtn').addEventListener('click',showResult);
+document.getElementById('resetBtn').addEventListener('click',rebuild);
+document.getElementById('nextBtn').addEventListener('click',()=>{ if(stepIdx<solution.moves.length){stepIdx++;renderStep();} });
+document.getElementById('prevBtn').addEventListener('click',()=>{ if(stepIdx>0){stepIdx--;renderStep();} });
+document.getElementById('modeSel').addEventListener('click',(e)=>{
+  const b=e.target.closest('button[data-mode]'); if(!b) return;
+  outputMode=b.dataset.mode;
+  document.querySelectorAll('#modeSel button').forEach(x=>x.classList.toggle('on',x===b));
+  if(solution) renderStep();
+});
+document.getElementById('langBar').addEventListener('click',(e)=>{
+  const b=e.target.closest('button[data-lang]'); if(!b) return;
+  setLang(b.dataset.lang);
+});
+
+/* init */
+(function(){
+  let saved='en';
+  try{ const s=localStorage.getItem('gothicSolverLang'); if(s && I18N[s]) saved=s; }catch(e){}
+  LANG=saved;
+  applyStaticI18n();
+  initState(5); renderSetup(); renderCoupTable();
+})();
+</script>
+</body>
+</html>
